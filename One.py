@@ -9,7 +9,7 @@ setup_logger()
 
 MAX_ATTEMPTS = 5
 
-class One:
+class OneEcomm:
     def __init__(self, Driver, base_url):
         self._base_url = base_url
         self._driver = Driver.driver
@@ -20,9 +20,26 @@ class One:
             try:
                 return func()
             except exceptions as e:
-                print(f"{on_fail_message or 'Attempt failed'}, retrying... ({attempt + 1}/{max_retries})")
+                print(f"{on_fail_message or 'Attempt failed'}, retrying... ({attempt + 1}/{max_retries}) {e}")
                 time.sleep(delay)
         raise Exception(on_fail_execute_message or "Max retries exceeded")
+    
+    def clear_search_bar(self):
+        def try_clear_search_bar():
+            search_box = WebDriverWait(self._driver, 20).until(
+                EC.visibility_of_element_located((By.ID, 'searchName'))
+            )
+            search_box.clear()
+            logging.info(f"Cleared search bar.")
+
+
+        self.retry_until_success(
+            try_clear_search_bar,
+            max_retries=MAX_ATTEMPTS,
+            delay=2,
+            on_fail_message="Failed to clear search bar",
+            on_fail_execute_message="Failed to clear search bar after multiple attempts"
+        )
     
     def open_page(self):
 
@@ -34,7 +51,6 @@ class One:
                 EC.visibility_of_element_located((By.ID, "IframeCurrentEcom"))
             )
             self._driver.switch_to.frame(iframe)
-            # Wait for JavaScript rendering
 
 
         self.retry_until_success(
