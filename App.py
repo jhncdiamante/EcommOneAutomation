@@ -1,8 +1,10 @@
+import random
 from One import OneEcomm
 from WebDriverManager import Driver
 from datetime import datetime
 import pandas as pd
 
+import time
 INPUT_FILE_PATH = "input.csv" # <<<< INPUT FILE TYPE MUST MATCH THE OUTPUT FILE TYPE
 OUTPUT_FILE_PATH = "output.csv"
 if INPUT_FILE_PATH.endswith(".csv") and OUTPUT_FILE_PATH.endswith(".csv"):
@@ -12,69 +14,58 @@ elif INPUT_FILE_PATH.endswith(".xlsx") and OUTPUT_FILE_PATH.endswith(".xlsx"):
 else:
     raise ValueError("Incorrect file format.")
 
-
-
 booking_numbers = input_file.iloc[:, 0].dropna().unique().tolist()
 
 driver = Driver()
 base_url = "https://ecomm.one-line.com/one-ecom/manage-shipment/cargo-tracking"
 
-#booking_number = "DVOF00401402"
-datalist = []
-MATCH_RULES = {
-        "gate in": 0,
-        "departure": 0,
-        "arrival": 1,
-        "discharging": 1,
-        "gate out": 1
-    }
-table_data = {key: None for key in MATCH_RULES}
-print(table_data)
-exit()
+datalist = []  # extracted data storage
+columnsA = ['gate in to outbound terminal', 'departure from port of loading'] # first occurence
+columnsB = ['arrival at port of discharging', 'discharging', 'gate out']  # last occurence
+
 
 One = OneEcomm(driver, base_url)
 
+
 for booking_number in booking_numbers:
     One.open_page()
-    
     One.search_cargo_tracking(booking_number)
     One.click_search_button()
-    table = One.get_table()
-    rows = One.get_table_rows(table)
+   
+    containers_table = One.get_containers_info_table()
+    containers = One.get_containers(containers_table)
 
-    for row in rows:
-        c_num = One.process_row(row)  # get container number and click to show table
-        table_data = {key: None for key in MATCH_RULES}
-        table_data['booking number'] = booking_number
-        table_data['container number'] = c_num
+    for container in containers:
+        c_num = One.head_to_container_data(container)  # get container number and click to show table
+        container_data = {}
+        container_data['booking number'] = booking_number
+        container_data['container number'] = c_num
 
-        data = One.get_container_info()
-        for status, date in data.items():
-            for column_name, rule in MATCH_RULES.items():
-                if column_name in status:
-                    if rule == 0 and table_data[column_name] is None:
-                        table_data[column_name] = date
-                        
-                        if column_name == 'departure':
-                            vessel_and_number = status.split("' ")[0]
-                            table_data['departure vessel and number'] = vessel_and_number[1:].upper()
-                    elif rule == 1:
-                        table_data[column_name] = date
-                        if column_name == 'arrival':
-                            vessel_and_number = status.split("' ")[0]
-                            table_data['arrival vessel and number'] = vessel_and_number[1:].upper()
+        shipment_process_data = One.get_container_info()  # dict with status and date key-pairs
+
+        def find_match(columns_list, status_list):
+            for column in columns_list:
+                for status in status_list:
+                    if column in status:
+                        print(f"Founded data for {column}")
+                        container_data[column] = shipment_process_data[status]
+                        if column in ('departure from port of loading', 'arrival at port of discharging'):
+                            vessel_and_number = status.split("' ")[0][1:].upper()
+                            words = vessel_and_number.split()
+                            container_data[f'{column} vessel number'] = words[-1]
+                            container_data[f'{column} vessel name'] = ' '.join(words[:-1])
+                        break         
         
-        table_data['scrape date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        datalist.append(table_data)
+        status_list = shipment_process_data.keys()
+        find_match(columnsA, status_list)
+        find_match(columnsB, list(status_list)[::-1])     
+
+        
+        container_data['scrape date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        datalist.append(container_data)
 
     One.clear_search_bar()
-    #One._driver.refresh()
+    time.sleep(random.randint(5, 10))
 
 df = pd.DataFrame(datalist)
 df.to_csv(OUTPUT_FILE_PATH, index=False)
-print("Done.")
-
-
-
-
-

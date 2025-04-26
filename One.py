@@ -13,6 +13,7 @@ class OneEcomm:
     def __init__(self, Driver, base_url):
         self._base_url = base_url
         self._driver = Driver.driver
+        
 
     def retry_until_success(self, func, max_retries=MAX_ATTEMPTS, delay=2, exceptions=(Exception,), on_fail_message=None, on_fail_execute_message=None):
     
@@ -44,6 +45,7 @@ class OneEcomm:
     def open_page(self):
 
         def try_open_page():
+            
             self._driver.get(self._base_url)
             logging.info(f"Page opened successfully: {self._base_url}")
             self._driver.maximize_window()
@@ -60,9 +62,6 @@ class OneEcomm:
             on_fail_message="Failed to open page",
             on_fail_execute_message="Failed to open page after multiple attempts"
         )
-        print(self._driver.execute_script("return document.getElementById('searchName').outerHTML"))
-        ready_state = self._driver.execute_script("return document.readyState")
-        print("Document ready state: ", ready_state)
 
 
     def search_cargo_tracking(self, tracking_number):
@@ -98,7 +97,7 @@ class OneEcomm:
             on_fail_execute_message="Failed to click search button after multiple attempts"
         )
 
-    def get_table(self):
+    def get_containers_info_table(self):
         def try_get_table():
             table = WebDriverWait(self._driver, 20).until(
                 EC.visibility_of_element_located((By.ID, 'main-grid'))
@@ -114,7 +113,7 @@ class OneEcomm:
             on_fail_execute_message="Failed to get table after multiple attempts"
         )
 
-    def get_table_rows(self, table):
+    def get_containers(self, table):
         def try_get_table_rows():
             rows = WebDriverWait(table, 20).until(
                 EC.presence_of_all_elements_located((By.XPATH, './/tbody/tr[@id]'))
@@ -130,7 +129,7 @@ class OneEcomm:
             on_fail_execute_message="Failed to get table rows after multiple attempts"
         )
        
-    def process_row(self, row):
+    def head_to_container_data(self, row):
         def try_process_row():
             container_number = WebDriverWait(row, 20).until(
                 EC.visibility_of_element_located((By.TAG_NAME, 'a'))
@@ -160,6 +159,10 @@ class OneEcomm:
                 cells = row.find_elements(By.TAG_NAME, 'td')
                 status = cells[1].text.lower()
                 date = cells[3].text
+                if "Actual" in date:
+                    date = date.split("Actual")[1].strip()
+                elif "Estimated" in date:
+                    date = date.split("Estimated")[1].strip()
                 table_data[status] = date
             return table_data
 
