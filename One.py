@@ -159,10 +159,10 @@ class OneEcomm:
                 cells = row.find_elements(By.TAG_NAME, 'td')
                 status = cells[1].text.lower()
                 date = cells[3].text
-                if "Actual" in date:
-                    date = date.split("Actual")[1].strip()
-                elif "Estimated" in date:
-                    date = date.split("Estimated")[1].strip()
+
+                if date.startswith("Actual") or date.startswith("Estimate"):
+                    date = ' '.join(date.split()[1:])
+               
                 table_data[status] = date
             return table_data
 
