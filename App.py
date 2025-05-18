@@ -46,7 +46,7 @@ for shipment in One.shipments:
             # this control flow records the first occurrence of Gate in and Departure
             # and the last occurrence of Arrival, Discharge, and Gate out for delivery
 
-            if (container_data[milestone.event] is not None and milestone.event not in ["Gate in", "Departure"]) or (milestones_data[milestone.event] is None):
+            if (container_data[milestone.event] is not None and milestone.event not in ["Gate in", "Departure"]) or (container_data[milestone.event] is None):
                 container_data[milestone.event] = milestone.date
                 if milestone.event in ["Arrival", "Departure"]:
                     container_data[f"{milestone.event} Vessel Name"] = milestone.vessel_name
